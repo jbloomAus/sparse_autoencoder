@@ -8,11 +8,7 @@ from tqdm.auto import tqdm
 import wandb
 
 from sparse_autoencoder.activation_store.base_store import ActivationStoreItem
-from sparse_autoencoder.autoencoder.loss import (
-    l1_loss,
-    reconstruction_loss,
-    sae_training_loss,
-)
+from sparse_autoencoder.autoencoder.loss import l1_loss, reconstruction_loss, sae_training_loss
 from sparse_autoencoder.autoencoder.model import SparseAutoencoder
 from sparse_autoencoder.train.sweep_config import SweepParametersRuntime
 
@@ -44,7 +40,7 @@ def train_autoencoder(
     batch_size: int = activations_dataloader.batch_size  # type: ignore
 
     learned_activations_fired_count: Int[Tensor, " activations"] = torch.zeros(
-        autoencoder.n_learned_features, dtype=torch.int32
+        autoencoder.n_learned_features, dtype=torch.int32, device=device
     )
 
     step = 0
@@ -83,7 +79,7 @@ def train_autoencoder(
             learned_activations_fired_count.add_(fired.sum(dim=0))
 
             # Backwards pass
-            total_loss.backward()
+            total_loss.mean().backward()
 
             optimizer.step()
 

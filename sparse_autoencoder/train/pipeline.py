@@ -1,5 +1,6 @@
 """Training Pipeline."""
 from collections.abc import Iterable
+from pathlib import Path
 
 import torch
 from torch.optim import Adam
@@ -7,13 +8,11 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 from transformer_lens import HookedTransformer
+import wandb
 
 from sparse_autoencoder.activation_store.base_store import ActivationStore
 from sparse_autoencoder.autoencoder.model import SparseAutoencoder
-from sparse_autoencoder.source_data.abstract_dataset import (
-    SourceDataset,
-    TorchTokenizedPrompts,
-)
+from sparse_autoencoder.source_data.abstract_dataset import SourceDataset, TorchTokenizedPrompts
 from sparse_autoencoder.train.generate_activations import generate_activations
 from sparse_autoencoder.train.sweep_config import SweepParametersRuntime
 from sparse_autoencoder.train.train_autoencoder import train_autoencoder
@@ -56,7 +55,7 @@ def stateful_dataloader_iterable(
     yield from dataloader
 
 
-def pipeline(
+def pipeline(  # noqa: PLR0913
     src_model: HookedTransformer,
     src_model_activation_hook_point: str,
     src_model_activation_layer: int,
@@ -66,6 +65,8 @@ def pipeline(
     autoencoder: SparseAutoencoder,
     source_dataset_batch_size: int = 16,
     sweep_parameters: SweepParametersRuntime = SweepParametersRuntime(),  # noqa: B008
+    num_iterations: int = 100,
+    log_artifacts: bool = True,  # noqa: FBT002, FBT001
     device: torch.device | None = None,
 ) -> None:
     """Full pipeline for training the sparse autoEncoder.
@@ -87,6 +88,8 @@ def pipeline(
         autoencoder: The autoencoder to train.
         source_dataset_batch_size: Batch size of tokenized prompts for generating the source data.
         sweep_parameters: Parameter config to use.
+        num_iterations: Number of times to fill and consume the activation store.
+        log_artifacts: Whether to log the model checkpoints to wandb.
         device: Device to run pipeline on.
     """
     autoencoder.to(device)
@@ -109,8 +112,9 @@ def pipeline(
         desc="Generate/Train Cycles",
         position=0,
         dynamic_ncols=True,
+        total=num_iterations,
     ) as progress_bar:
-        while True:
+        for i in range(num_iterations):
             # Add activations to the store
             generate_activations(
                 src_model,
@@ -145,6 +149,15 @@ def pipeline(
                 device=device,
                 previous_steps=total_steps,
             )
+
+            # save the model to disk and wandb
+            checkpoints_path = Path("./cache/checkpoints")
+            if not checkpoints_path.exists():
+                checkpoints_path.mkdir(parents=True)
+            checkpoint_path = checkpoints_path / f"model-{i}.pt"
+            torch.save(autoencoder.state_dict(), checkpoint_path)
+            if log_artifacts:
+                wandb.save(str(checkpoint_path))
 
             # Empty the store so we can fill it up again
             activation_store.empty()
