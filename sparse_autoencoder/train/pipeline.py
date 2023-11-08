@@ -1,5 +1,6 @@
 """Training Pipeline."""
 from collections.abc import Iterable
+from pathlib import Path
 
 from jaxtyping import Int
 import torch
@@ -8,6 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 from transformer_lens import HookedTransformer
+import wandb
 
 from sparse_autoencoder.activation_store.base_store import ActivationStore
 from sparse_autoencoder.autoencoder.model import SparseAutoencoder
@@ -70,6 +72,8 @@ def pipeline(  # noqa: PLR0913
     source_dataset_batch_size: int = 16,
     resample_frequency: int = 25_000_000,
     sweep_parameters: SweepParametersRuntime = SweepParametersRuntime(),  # noqa: B008
+    num_iterations: int = 100,
+    log_artifacts: bool = True,  # noqa: FBT002, FBT001
     device: torch.device | None = None,
     max_activations: int = 100_000_000,
 ) -> None:
@@ -93,6 +97,8 @@ def pipeline(  # noqa: PLR0913
         source_dataset_batch_size: Batch size of tokenized prompts for generating the source data.
         resample_frequency: How often to resample neurons (number of activations learnt on).
         sweep_parameters: Parameter config to use.
+        num_iterations: Number of times to fill and consume the activation store.
+        log_artifacts: Whether to log the model checkpoints to wandb.
         device: Device to run pipeline on.
         max_activations: Maximum number of activations to train with. May train for less if the
             source dataset is exhausted.
@@ -181,4 +187,14 @@ def pipeline(  # noqa: PLR0913
                 learned_activations_fired_count.zero_()
                 optimizer.reset_state_all_parameters()
 
+            # save the model to disk and wandb
+            checkpoints_path = Path("./cache/checkpoints")
+            if not checkpoints_path.exists():
+                checkpoints_path.mkdir(parents=True)
+            checkpoint_path = checkpoints_path / f"model-{i}.pt"
+            torch.save(autoencoder.state_dict(), checkpoint_path)
+            if log_artifacts:
+                wandb.save(str(checkpoint_path))
+
+            # Empty the store so we can fill it up again
             activation_store.empty()
