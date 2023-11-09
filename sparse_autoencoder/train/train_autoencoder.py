@@ -2,12 +2,14 @@
 import torch
 import wandb
 from jaxtyping import Float, Int
-from torch import Tensor, device
+from torch import Tensor, device, set_grad_enabled
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
 
 from sparse_autoencoder.activation_store.base_store import ActivationStore
-from sparse_autoencoder.autoencoder.loss import (l1_loss, reconstruction_loss,
+from sparse_autoencoder.autoencoder.loss import (l0, l1_loss,
+                                                 reconstruction_loss,
                                                  sae_training_loss)
 from sparse_autoencoder.autoencoder.model import SparseAutoencoder
 from sparse_autoencoder.train.sweep_config import SweepParametersRuntime
@@ -73,20 +75,27 @@ def train_autoencoder(
         with torch.no_grad():
             fired = learned_activations > 0
             learned_activations_fired_count.add_(fired.sum(dim=0))
+            activations_l0 = l0(learned_activations)
 
-        # Backwards pass
-        total_loss.mean().backward()
-        optimizer.step()
+            # Backwards pass
+            total_loss.backward()
 
-        # Log
-        if step % log_interval == 0 and wandb.run is not None:
-            wandb.log(
-                {
-                    "reconstruction_loss": reconstruction_loss_mse.mean().item(),
-                    "l1_loss": l1_loss_learned_activations.mean().item(),
-                    "loss": total_loss.mean().item(),
-                },
-            )
+            optimizer.step()
+
+            # Log
+            if step % log_interval == 0 and wandb.run is not None:
+                wandb.log(
+                    {
+                        "loss/reconstruction_loss": reconstruction_loss_mse,
+                        "loss/l1_loss": l1_loss_learned_activations,
+                        "loss/loss": total_loss,
+                        "metrics/l0": activations_l0,
+                    },
+                )
+
+            # TODO: Get the feature density & also log to wandb
+
+            # TODO: Apply neuron resampling if enabled
 
     current_step = previous_steps + step + 1
 
