@@ -1,16 +1,13 @@
 """Training Pipeline."""
-import torch
-import wandb
 from jaxtyping import Float, Int
-from torch import Tensor, device, set_grad_enabled
+import torch
+from torch import Tensor, device
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
-from tqdm.auto import tqdm
+import wandb
 
 from sparse_autoencoder.activation_store.base_store import ActivationStore
-from sparse_autoencoder.autoencoder.loss import (l0, l1_loss,
-                                                 reconstruction_loss,
-                                                 sae_training_loss)
+from sparse_autoencoder.autoencoder.loss import l0, l1_loss, reconstruction_loss, sae_training_loss
 from sparse_autoencoder.autoencoder.model import SparseAutoencoder
 from sparse_autoencoder.train.sweep_config import SweepParametersRuntime
 

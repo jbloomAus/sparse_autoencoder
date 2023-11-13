@@ -198,7 +198,7 @@ def pipeline(  # noqa: PLR0913
             checkpoints_path = Path("./cache/checkpoints")
             if not checkpoints_path.exists():
                 checkpoints_path.mkdir(parents=True)
-            checkpoint_path = checkpoints_path / f"model-{i}.pt"
+            checkpoint_path = checkpoints_path / f"model-{total_activations}.pt"
             torch.save(autoencoder.state_dict(), checkpoint_path)
             if log_artifacts:
                 wandb.save(str(checkpoint_path))

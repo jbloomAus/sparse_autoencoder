@@ -12,7 +12,7 @@
     "source.fixAll.eslint": true,
     "source.organizeImports": true
   },
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
   "evenBetterToml.formatter.allowedBlankLines": 1,
   "evenBetterToml.formatter.arrayAutoCollapse": true,
   "evenBetterToml.formatter.arrayAutoExpand": true,
@@ -31,8 +31,8 @@
   "evenBetterToml.schema.enabled": true,
   "evenBetterToml.schema.links": true,
   "evenBetterToml.syntax.semanticTokens": false,
-  "notebook.formatOnCellExecution": true,
-  "notebook.formatOnSave.enabled": true,
+  "notebook.formatOnCellExecution": false,
+  "notebook.formatOnSave.enabled": false,
   "python.analysis.autoFormatStrings": true,
   "python.analysis.autoImportCompletions": true,
   "python.analysis.inlayHints.functionReturnTypes": false,
@@ -42,5 +42,6 @@
   "python.testing.pytestEnabled": true,
   "rewrap.autoWrap.enabled": true,
   "rewrap.wrappingColumn": 100,
-  "python.analysis.diagnosticMode": "workspace"
+"python.analysis.diagnosticMode": "workspace",
+"editor.formatOnSaveMode": "modifications"
 }
