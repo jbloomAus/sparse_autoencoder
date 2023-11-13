@@ -13,11 +13,15 @@ import wandb
 
 from sparse_autoencoder.activation_store.base_store import ActivationStore
 from sparse_autoencoder.autoencoder.model import SparseAutoencoder
+<<<<<<< HEAD
 from sparse_autoencoder.optimizer.adam_with_reset import AdamWithReset
 from sparse_autoencoder.source_data.abstract_dataset import (
     SourceDataset,
     TorchTokenizedPrompts,
 )
+=======
+from sparse_autoencoder.source_data.abstract_dataset import SourceDataset, TorchTokenizedPrompts
+>>>>>>> 69af7dbb59d3d726fe00b4ee880bf769c4a49a1a
 from sparse_autoencoder.train.generate_activations import generate_activations
 from sparse_autoencoder.train.resample_neurons import resample_dead_neurons
 from sparse_autoencoder.train.sweep_config import SweepParametersRuntime
@@ -72,7 +76,6 @@ def pipeline(  # noqa: PLR0913
     source_dataset_batch_size: int = 16,
     resample_frequency: int = 25_000_000,
     sweep_parameters: SweepParametersRuntime = SweepParametersRuntime(),  # noqa: B008
-    num_iterations: int = 100,
     log_artifacts: bool = True,  # noqa: FBT002, FBT001
     device: torch.device | None = None,
     max_activations: int = 100_000_000,
@@ -171,6 +174,16 @@ def pipeline(  # noqa: PLR0913
                 neuron_activity.add_(learned_activations_fired_count)
 
             activations_since_resampling += len(activation_store)
+            # save the model to disk and wandb
+            checkpoints_path = Path("./cache/checkpoints")
+            if not checkpoints_path.exists():
+                checkpoints_path.mkdir(parents=True)
+            checkpoint_path = checkpoints_path / f"model-{total_activations}_steps.pt"
+            torch.save(autoencoder.state_dict(), checkpoint_path)
+            if log_artifacts:
+                wandb.save(str(checkpoint_path))
+
+            # Empty the store so we can fill it up again
             total_activations += len(activation_store)
             progress_bar.update(len(activation_store))
 
