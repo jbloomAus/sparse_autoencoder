@@ -2,26 +2,20 @@
 from collections.abc import Iterable
 from pathlib import Path
 
-from jaxtyping import Int
 import torch
+import wandb
+from jaxtyping import Int
 from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 from transformer_lens import HookedTransformer
-import wandb
 
 from sparse_autoencoder.activation_store.base_store import ActivationStore
 from sparse_autoencoder.autoencoder.model import SparseAutoencoder
-<<<<<<< HEAD
 from sparse_autoencoder.optimizer.adam_with_reset import AdamWithReset
 from sparse_autoencoder.source_data.abstract_dataset import (
-    SourceDataset,
-    TorchTokenizedPrompts,
-)
-=======
-from sparse_autoencoder.source_data.abstract_dataset import SourceDataset, TorchTokenizedPrompts
->>>>>>> 69af7dbb59d3d726fe00b4ee880bf769c4a49a1a
+    SourceDataset, TorchTokenizedPrompts)
 from sparse_autoencoder.train.generate_activations import generate_activations
 from sparse_autoencoder.train.resample_neurons import resample_dead_neurons
 from sparse_autoencoder.train.sweep_config import SweepParametersRuntime
