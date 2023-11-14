@@ -1,18 +1,19 @@
 """Training Pipeline."""
-from jaxtyping import Float, Int
 import torch
+import wandb
+from jaxtyping import Float, Int
 from torch import Tensor, device
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
-import wandb
 
 from sparse_autoencoder.activation_store.base_store import ActivationStore
-from sparse_autoencoder.autoencoder.loss import (
-    l1_loss,
-    reconstruction_loss,
-    sae_training_loss,
-)
+from sparse_autoencoder.autoencoder.loss import (l0, l1_loss,
+                                                 reconstruction_loss,
+                                                 sae_training_loss)
 from sparse_autoencoder.autoencoder.model import SparseAutoencoder
+from sparse_autoencoder.train.metrics.capacity import calc_capacities
+from sparse_autoencoder.train.metrics.feature_density import \
+    calc_feature_density
 from sparse_autoencoder.train.sweep_config import SweepParametersRuntime
 
 
@@ -72,22 +73,29 @@ def train_autoencoder(
             sweep_parameters.l1_coefficient,
         )
 
+        # Backwards pass
+        total_loss.mean().backward()
+        optimizer.step()
+
         # Store count of how many neurons have fired
         with torch.no_grad():
             fired = learned_activations > 0
             learned_activations_fired_count.add_(fired.sum(dim=0))
+            activations_l0 = l0(learned_activations)
+            feature_density = calc_feature_density(learned_activations)
 
-        # Backwards pass
-        total_loss.mean().backward()
-        optimizer.step()
+
 
         # Log
         if step % log_interval == 0 and wandb.run is not None:
             wandb.log(
                 {
-                    "reconstruction_loss": reconstruction_loss_mse.mean().item(),
-                    "l1_loss": l1_loss_learned_activations.mean().item(),
-                    "loss": total_loss.mean().item(),
+                    "loss/mean_average_reconstruction_loss": reconstruction_loss_mse.mean().item(),
+                    "loss/mean_l1_loss": l1_loss_learned_activations.mean().item(),
+                    "loss/mean_total_loss": total_loss.mean().item(),
+                    "metrics/l0": activations_l0, 
+                    "metrics/mean_feature_density": feature_density.mean().item()
+                    # "metrics/n_dead_neurons": fea
                 },
             )
 
